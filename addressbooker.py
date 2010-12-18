@@ -17,6 +17,7 @@ __author__ = 'brad@danga.com (Brad Fitzpatrick)'
 
 # Core Python
 import cgi
+import datetime
 import logging
 import pprint
 import random
@@ -296,11 +297,19 @@ class MergeView(webapp.RequestHandler):
 
   def get(self):
     key = self.request.get('key')
+    def err(msg):
+      self.response.out.write("<b>Error:</b> %s" % msg)
+      return
+
     if not key:
-      raise "Missing argument 'key'"
+      return err("Missing argument 'key'")
+
     post_dump = models.PostDump.get(db.Key(key))
     if not post_dump:
-      raise "State lost?  Um, do it again."
+      return err("State lost?  Um, do it again.")
+
+    if post_dump.touch_time < (datetime.datetime.now() - datetime.timedelta(1)):
+      return err("Import expired; re-import to try again.")
 
     contacts = simplejson.loads(post_dump.json)
     for contact in contacts:
